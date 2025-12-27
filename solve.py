@@ -1,0 +1,182 @@
+import csv
+from utils import run_sampler_repeated, plot_3d_hist
+
+
+# load problem instances
+ins = []
+with open('./instances.csv', 'r', encoding='utf-8') as f:
+    for line in f:
+        ins.append([int(x) for x in line.strip().split()])
+
+# configurations for sampling
+steps = 105000
+burn_in = 5000
+sample_every = 10
+seed = 42
+n_runs = 100
+
+# parameter grids
+p_good_grid = [3/4, 7/8, 15/16, 31/32, 63/64, 127/128, 255/256]
+c_grid = [100, 10, 1, 1e-1, 1e-2, 1e-3]     # beta = c / 2**(x_bits+y_bits)
+
+def success_count_from_counts(counts, F: int) -> int:
+    return sum(c for (X, Y), c in counts.items() if X * Y == F)
+
+def total_samples_from_counts(counts) -> int:
+    return sum(counts.values())
+
+# results container (for CSV)
+rows = []
+
+# pretty print header
+print("=" * 90)
+print("Grid search results (best by success frequency = count(X*Y==F))")
+print(f"steps={steps}, burn_in={burn_in}, sample_every={sample_every}, n_runs={n_runs}, seed(base)={seed}")
+print("=" * 90)
+
+for F, x_bits, y_bits in ins:
+
+    # ---------- RULE mode sweep ----------
+    best_rule = {
+        "mode": "rule",
+        "best_param": None,   # p_good
+        "best_success": -1,
+        "best_total": 0,
+        "best_success_rate": 0.0,
+    }
+
+    for p_good in p_good_grid:
+        counts, *_ = run_sampler_repeated(
+            F=F, x_bits=x_bits, y_bits=y_bits,
+            n_runs=n_runs,
+            steps=steps, burn_in=burn_in, sample_every=sample_every,
+            base_seed=seed,
+            mode="rule",
+            p_good=p_good,
+            beta=0.01,
+        )
+        succ = success_count_from_counts(counts, F)
+        tot = total_samples_from_counts(counts)
+        rate = (succ / tot) if tot > 0 else 0.0
+
+        if succ > best_rule["best_success"]:
+            best_rule.update(
+                best_param=p_good,
+                best_success=succ,
+                best_total=tot,
+                best_success_rate=rate,
+            )
+
+    # ---------- SIGMOID mode sweep ----------
+    best_sigmoid = {
+        "mode": "sigmoid",
+        "best_param": None,   # (c, beta)
+        "best_success": -1,
+        "best_total": 0,
+        "best_success_rate": 0.0,
+    }
+
+    denom = 2 ** (x_bits + y_bits)
+    for c in c_grid:
+        beta = c / denom
+        counts, *_ = run_sampler_repeated(
+            F=F, x_bits=x_bits, y_bits=y_bits,
+            n_runs=n_runs,
+            steps=steps, burn_in=burn_in, sample_every=sample_every,
+            base_seed=seed,
+            mode="sigmoid",
+            p_good=0.875,
+            beta=beta,
+        )
+        succ = success_count_from_counts(counts, F)
+        tot = total_samples_from_counts(counts)
+        rate = (succ / tot) if tot > 0 else 0.0
+
+        if succ > best_sigmoid["best_success"]:
+            best_sigmoid.update(
+                best_param=(c, beta),
+                best_success=succ,
+                best_total=tot,
+                best_success_rate=rate,
+            )
+    
+
+    # ---------- DETERMINISTIC mode ----------
+    counts, *_ = run_sampler_repeated(
+        F=F, x_bits=x_bits, y_bits=y_bits,
+        n_runs=n_runs,
+        steps=steps, burn_in=burn_in, sample_every=sample_every,
+        base_seed=seed,
+        mode="deterministic",
+        p_good=0.875,
+        beta=0.01,
+    )
+    det_succ = success_count_from_counts(counts, F)
+    det_tot = total_samples_from_counts(counts)
+    det_rate = (det_succ / det_tot) if det_tot > 0 else 0.0
+
+
+    # ---------- print per-instance summary ----------
+    print(f"\nInstance: F={F}, x_bits={x_bits}, y_bits={y_bits}")
+    print("-" * 90)
+
+    print(
+        f"[rule]          "
+        f"best p_good = {best_rule['best_param']:>8.6f} | "
+        f"success = {best_rule['best_success']:>6d} / {best_rule['best_total']:<6d} "
+        f"({best_rule['best_success_rate']:>7.4%})"
+    )
+
+    c_best, beta_best = best_sigmoid["best_param"]
+    print(
+        f"[sigmoid]       "
+        f"best beta   = {beta_best:>8.6f} | "
+        f"success = {best_sigmoid['best_success']:>6d} / {best_sigmoid['best_total']:<6d} "
+        f"({best_sigmoid['best_success_rate']:>7.4%})"
+    )
+
+    print(
+        f"[deterministic]                        | "
+        f"success = {det_succ:>6d} / {det_tot:<6d} "
+        f"({det_rate:>7.4%})"
+    )
+
+
+    # ---------- store rows for CSV ----------
+    rows.append({
+        "F": F,
+        "x_bits": x_bits,
+        "y_bits": y_bits,
+        "steps": steps,
+        "burn_in": burn_in,
+        "sample_every": sample_every,
+        "n_runs": n_runs,
+        "seed_base": seed,
+
+        "rule_best_p_good": best_rule["best_param"],
+        "rule_success": best_rule["best_success"],
+        "rule_total": best_rule["best_total"],
+        "rule_success_rate": best_rule["best_success_rate"],
+
+        "sigmoid_best_c": c_best,
+        "sigmoid_best_beta": beta_best,
+        "sigmoid_success": best_sigmoid["best_success"],
+        "sigmoid_total": best_sigmoid["best_total"],
+        "sigmoid_success_rate": best_sigmoid["best_success_rate"],
+
+        "deterministic_success": det_succ,
+        "deterministic_total": det_tot,
+        "deterministic_success_rate": det_rate,
+    })
+
+# ---------- save CSV ----------
+out_path = "./gridsearch_best_results2.csv"
+fieldnames = list(rows[0].keys()) if rows else []
+with open(out_path, "w", newline="", encoding="utf-8") as f:
+    w = csv.DictWriter(f, fieldnames=fieldnames)
+    w.writeheader()
+    w.writerows(rows)
+
+print("\n" + "=" * 90)
+print(f"Saved: {out_path}")
+print("=" * 90)
