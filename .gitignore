@@ -6,3 +6,9 @@
 /discarded/general.py
 /discarded/vote_161.py
 /discarded/vote_945.py
+.idea/.gitignore
+.idea/misc.xml
+.idea/modules.xml
+.idea/Quantized-Integer-Factorization.iml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
