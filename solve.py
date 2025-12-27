@@ -1,7 +1,6 @@
 import csv
 from utils import run_sampler_repeated, plot_3d_hist
 
-
 # load problem instances
 ins = []
 with open('./instances.csv', 'r', encoding='utf-8') as f:
