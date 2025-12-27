@@ -1,8 +1,7 @@
 # Quantized-Integer-Factorization
 Solving integer factorization using Quantized Ising Machine.
 
-run:
-
-'''
+simply run:
+```sh
 python solve.py
-'''
+```
