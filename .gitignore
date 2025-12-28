@@ -14,3 +14,4 @@
 .idea/inspectionProfiles/profiles_settings.xml
 __pycache__/utils.cpython-313.pyc
 .vscode/settings.json
+/gridsearch_best_results2.csv
