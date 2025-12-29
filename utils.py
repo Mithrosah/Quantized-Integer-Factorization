@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
+
 # =============================
 # Helpers
 # =============================
@@ -115,8 +116,9 @@ def run_sampler(
 
     return counts, samples
 
+
 # =============================
-# NEW: run many chains & aggregate
+# run many chains & aggregate (with run-level success)
 # =============================
 def run_sampler_repeated(
     F: int,
@@ -134,11 +136,17 @@ def run_sampler_repeated(
 ):
     """
     Repeat sampling n_runs times (independent chains), aggregate counts.
-    - Each run uses seed = base_seed + i (thus different random initial state and trajectory)
-    - Returns aggregated_counts, aggregated_samples (optional)
+
+    Run-level success definition:
+    - A run is SUCCESS if it ever samples any (X, Y) with X*Y == F at least once.
+
+    Returns:
+      aggregated_counts, aggregated_samples (optional), success_runs, success_rate
     """
     aggregated_counts = Counter()
     aggregated_samples = [] if collect_samples else None
+
+    success_runs = 0
 
     for i in range(n_runs):
         seed_i = base_seed + i
@@ -150,11 +158,19 @@ def run_sampler_repeated(
             p_good=p_good,
             beta=beta
         )
+
+        # run-level success: this run ever hits a correct factorization
+        run_success = any((X * Y == F) and (c > 0) for (X, Y), c in counts_i.items())
+        if run_success:
+            success_runs += 1
+
         aggregated_counts.update(counts_i)
         if collect_samples:
             aggregated_samples.extend(samples_i)
 
-    return aggregated_counts, aggregated_samples
+    success_rate = (success_runs / n_runs) if n_runs > 0 else 0.0
+    return aggregated_counts, aggregated_samples, success_runs, success_rate
+
 
 def plot_3d_hist(counts, x_bits, y_bits, title="3D histogram of (X,Y)"):
     X_vals = list(range(1, 2**x_bits, 2))
@@ -212,10 +228,10 @@ if __name__ == "__main__":
     p_good = 127/128
     beta = 3 / 2**(x_bits + y_bits)
 
-    # NEW: number of independent runs
+    # number of independent runs
     n_runs = 10
 
-    counts, samples = run_sampler_repeated(
+    counts, samples, success_runs, success_rate = run_sampler_repeated(
         F=F, x_bits=x_bits, y_bits=y_bits,
         n_runs=n_runs,
         steps=steps, burn_in=burn_in, sample_every=sample_every,
@@ -228,6 +244,7 @@ if __name__ == "__main__":
 
     total = sum(counts.values()) if sum(counts.values()) > 0 else 1
     print(f"Aggregated over n_runs={n_runs}, total_samples={total}")
+    print(f"Run success: {success_runs}/{n_runs} ({success_rate:.4%})")
 
     for (X, Y), c in counts.most_common(15):
         print(f"X={X}, Y={Y}, X*Y={X*Y}, freq={c/total:.4f}", end="")
