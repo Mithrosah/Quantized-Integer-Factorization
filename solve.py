@@ -13,7 +13,7 @@ with open('./instances.csv', 'r', encoding='utf-8') as f:
 burn_in = 5000
 sample_every = 10
 seed = 42
-n_runs = 100
+n_runs = 1000
 
 
 # parameter grids
