@@ -1,5 +1,5 @@
 import csv
-from utils import run_sampler_repeated, plot_3d_hist
+from utils import run_sampler_repeated
 
 
 # load problem instances
@@ -9,8 +9,7 @@ with open('./instances.csv', 'r', encoding='utf-8') as f:
         ins.append([int(x) for x in line.strip().split()])
 
 
-# configurations for sampling
-steps = 105000
+# sampling configuration (instance-dependent steps)
 burn_in = 5000
 sample_every = 10
 seed = 42
@@ -26,33 +25,37 @@ def total_samples_from_counts(counts) -> int:
     return sum(counts.values())
 
 
-# results container (for CSV)
 rows = []
 
-
-# pretty print header
-print("=" * 90)
-print("Grid search results (best by run-level success = success_runs / n_runs)")
-print(f"steps={steps}, burn_in={burn_in}, sample_every={sample_every}, n_runs={n_runs}, seed(base)={seed}")
-print("=" * 90)
+print("=" * 100)
+print("Grid search (run-level success: success_runs / n_runs)")
+print(f"burn_in={burn_in}, sample_every={sample_every}, n_runs={n_runs}, seed(base)={seed}")
+print("steps = 5000 * (x_bits + y_bits) + burn_in")
+print("=" * 100)
 
 
 for F, x_bits, y_bits in ins:
 
-    # ---------- RULE mode sweep ----------
+    # instance-dependent steps
+    steps = 5000 * (x_bits + y_bits) + burn_in
+
+    # ---------- RULE mode ----------
     best_rule = {
-        "mode": "rule",
-        "best_param": None,   # p_good
+        "best_param": None,
         "best_success_runs": -1,
-        "best_total_samples": 0,       # info only
+        "best_total_samples": 0,
         "best_run_success_rate": 0.0,
     }
 
     for p_good in p_good_grid:
         counts, _, success_runs, success_rate = run_sampler_repeated(
-            F=F, x_bits=x_bits, y_bits=y_bits,
+            F=F,
+            x_bits=x_bits,
+            y_bits=y_bits,
             n_runs=n_runs,
-            steps=steps, burn_in=burn_in, sample_every=sample_every,
+            steps=steps,
+            burn_in=burn_in,
+            sample_every=sample_every,
             base_seed=seed,
             mode="rule",
             p_good=p_good,
@@ -68,12 +71,11 @@ for F, x_bits, y_bits in ins:
                 best_run_success_rate=success_rate,
             )
 
-    # ---------- SIGMOID mode sweep ----------
+    # ---------- SIGMOID mode ----------
     best_sigmoid = {
-        "mode": "sigmoid",
         "best_param": None,   # (c, beta)
         "best_success_runs": -1,
-        "best_total_samples": 0,       # info only
+        "best_total_samples": 0,
         "best_run_success_rate": 0.0,
     }
 
@@ -81,9 +83,13 @@ for F, x_bits, y_bits in ins:
     for c in c_grid:
         beta = c / denom
         counts, _, success_runs, success_rate = run_sampler_repeated(
-            F=F, x_bits=x_bits, y_bits=y_bits,
+            F=F,
+            x_bits=x_bits,
+            y_bits=y_bits,
             n_runs=n_runs,
-            steps=steps, burn_in=burn_in, sample_every=sample_every,
+            steps=steps,
+            burn_in=burn_in,
+            sample_every=sample_every,
             base_seed=seed,
             mode="sigmoid",
             p_good=0.875,
@@ -101,9 +107,13 @@ for F, x_bits, y_bits in ins:
 
     # ---------- DETERMINISTIC mode ----------
     counts, _, det_success_runs, det_success_rate = run_sampler_repeated(
-        F=F, x_bits=x_bits, y_bits=y_bits,
+        F=F,
+        x_bits=x_bits,
+        y_bits=y_bits,
         n_runs=n_runs,
-        steps=steps, burn_in=burn_in, sample_every=sample_every,
+        steps=steps,
+        burn_in=burn_in,
+        sample_every=sample_every,
         base_seed=seed,
         mode="deterministic",
         p_good=0.875,
@@ -111,9 +121,10 @@ for F, x_bits, y_bits in ins:
     )
     det_total_samples = total_samples_from_counts(counts)
 
-    # ---------- print per-instance summary ----------
+    # ---------- print summary ----------
     print(f"\nInstance: F={F}, x_bits={x_bits}, y_bits={y_bits}")
-    print("-" * 90)
+    print(f"steps={steps}")
+    print("-" * 100)
 
     print(
         f"[rule]          "
@@ -126,7 +137,7 @@ for F, x_bits, y_bits in ins:
     c_best, beta_best = best_sigmoid["best_param"]
     print(
         f"[sigmoid]       "
-        f"best beta   = {beta_best:>8.6f} | "
+        f"best beta = {beta_best:>10.6f} | "
         f"success_runs = {best_sigmoid['best_success_runs']:>3d}/{n_runs:<3d} "
         f"({best_sigmoid['best_run_success_rate']:>7.4%}) | "
         f"total_samples={best_sigmoid['best_total_samples']}"
@@ -139,7 +150,6 @@ for F, x_bits, y_bits in ins:
         f"total_samples={det_total_samples}"
     )
 
-    # ---------- store rows for CSV ----------
     rows.append({
         "F": F,
         "x_bits": x_bits,
@@ -168,13 +178,12 @@ for F, x_bits, y_bits in ins:
 
 
 # ---------- save CSV ----------
-out_path = "./gridsearch_best_results2.csv"
-fieldnames = list(rows[0].keys()) if rows else []
+out_path = "./gridsearch_best_results3.csv"
 with open(out_path, "w", newline="", encoding="utf-8") as f:
-    w = csv.DictWriter(f, fieldnames=fieldnames)
-    w.writeheader()
-    w.writerows(rows)
+    writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+    writer.writeheader()
+    writer.writerows(rows)
 
-print("\n" + "=" * 90)
+print("\n" + "=" * 100)
 print(f"Saved: {out_path}")
-print("=" * 90)
+print("=" * 100)
