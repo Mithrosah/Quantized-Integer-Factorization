@@ -79,7 +79,6 @@ def update_bit(
     else:
         raise ValueError(f"Unknown mode: {mode}. Use 'rule' or 'sigmoid' or 'deterministic'.")
 
-
 def run_sampler(
     F: int,
     x_bits: int,
@@ -90,18 +89,8 @@ def run_sampler(
     seed: int = 0,
     mode: str = "rule",
     p_good: float = 0.875,
-    beta: float = 0.01,
-    track_first_hit: bool = False
+    beta: float = 0.01
 ):
-    """
-    Returns:
-      counts, samples, first_hit_step, first_hit_sample_index
-
-    Notes:
-      - first_hit_step is the first TIME STEP t where a sampled (X,Y) satisfies X*Y==F
-        (i.e. within the sampling condition t>=burn_in and modulo sample_every).
-      - If never hit, first_hit_step is None.
-    """
     assert x_bits >= 2 and y_bits >= 2, "Need at least 2 bits because LSB is fixed to 1."
     random.seed(seed)
 
@@ -116,9 +105,6 @@ def run_sampler(
     counts = Counter()
     samples = []
 
-    first_hit_step = None
-    first_hit_sample_index = None
-
     for t in range(steps):
         v = random.choice(nodes)
         update_bit(s, v, F, x_bits, y_bits, mode=mode, p_good=p_good, beta=beta)
@@ -128,15 +114,11 @@ def run_sampler(
             counts[(X, Y)] += 1
             samples.append((X, Y))
 
-            if track_first_hit and first_hit_step is None and (X * Y == F):
-                first_hit_step = t
-                first_hit_sample_index = len(samples) - 1
-
-    return counts, samples, first_hit_step, first_hit_sample_index
+    return counts, samples
 
 
 # =============================
-# run many chains & aggregate (with run-level success + TTFH list)
+# run many chains & aggregate (with run-level success)
 # =============================
 def run_sampler_repeated(
     F: int,
@@ -159,32 +141,26 @@ def run_sampler_repeated(
     - A run is SUCCESS if it ever samples any (X, Y) with X*Y == F at least once.
 
     Returns:
-      aggregated_counts,
-      aggregated_samples (optional),
-      success_runs,
-      success_rate,
-      hit_steps (list of per-run first_hit_step; None if never hit)
+      aggregated_counts, aggregated_samples (optional), success_runs, success_rate
     """
     aggregated_counts = Counter()
     aggregated_samples = [] if collect_samples else None
 
     success_runs = 0
-    hit_steps = []  # per-run first hit step (None if never hit)
 
     for i in range(n_runs):
         seed_i = base_seed + i
-        counts_i, samples_i, first_hit_step_i, _ = run_sampler(
+        counts_i, samples_i = run_sampler(
             F=F, x_bits=x_bits, y_bits=y_bits,
             steps=steps, burn_in=burn_in, sample_every=sample_every,
             seed=seed_i,
             mode=mode,
             p_good=p_good,
-            beta=beta,
-            track_first_hit=True
+            beta=beta
         )
 
-        run_success = first_hit_step_i is not None
-        hit_steps.append(first_hit_step_i)
+        # run-level success: this run ever hits a correct factorization
+        run_success = any((X * Y == F) and (c > 0) for (X, Y), c in counts_i.items())
         if run_success:
             success_runs += 1
 
@@ -193,7 +169,7 @@ def run_sampler_repeated(
             aggregated_samples.extend(samples_i)
 
     success_rate = (success_runs / n_runs) if n_runs > 0 else 0.0
-    return aggregated_counts, aggregated_samples, success_runs, success_rate, hit_steps
+    return aggregated_counts, aggregated_samples, success_runs, success_rate
 
 
 def plot_3d_hist(counts, x_bits, y_bits, title="3D histogram of (X,Y)"):
@@ -255,7 +231,7 @@ if __name__ == "__main__":
     # number of independent runs
     n_runs = 10
 
-    counts, samples, success_runs, success_rate, hit_steps = run_sampler_repeated(
+    counts, samples, success_runs, success_rate = run_sampler_repeated(
         F=F, x_bits=x_bits, y_bits=y_bits,
         n_runs=n_runs,
         steps=steps, burn_in=burn_in, sample_every=sample_every,
@@ -269,7 +245,6 @@ if __name__ == "__main__":
     total = sum(counts.values()) if sum(counts.values()) > 0 else 1
     print(f"Aggregated over n_runs={n_runs}, total_samples={total}")
     print(f"Run success: {success_runs}/{n_runs} ({success_rate:.4%})")
-    print(f"First-hit steps (per run): {hit_steps}")
 
     for (X, Y), c in counts.most_common(15):
         print(f"X={X}, Y={Y}, X*Y={X*Y}, freq={c/total:.4f}", end="")
