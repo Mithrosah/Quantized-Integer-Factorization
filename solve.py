@@ -31,7 +31,7 @@ with open('./instances.csv', 'r', encoding='utf-8') as f:
 
 
 # sampling configuration (instance-dependent steps)
-burn_in = 5000
+burn_in = 0
 sample_every = 1
 seed = 42
 n_runs = 1000
@@ -80,7 +80,7 @@ print("=" * 100)
 for F, x_bits, y_bits in ins:
 
     # instance-dependent steps
-    steps = 5000 * (x_bits + y_bits) + burn_in
+    steps = 1000 * (x_bits + y_bits) + burn_in
 
     # ---------- RULE mode ----------
     best_rule = {
