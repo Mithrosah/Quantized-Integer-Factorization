@@ -1,5 +1,4 @@
-/logs/result.txt
-/logs/result2.txt
+/logs/
 /gridsearch_best_results.csv
 /calculations/int_fac.mw
 /discarded/demo.py
@@ -15,5 +14,3 @@
 .idea/inspectionProfiles/profiles_settings.xml
 __pycache__/utils.cpython-313.pyc
 .vscode/settings.json
-/gridsearch_best_results2.csv
-/gridsearch_best_results3_ttfh.csv
