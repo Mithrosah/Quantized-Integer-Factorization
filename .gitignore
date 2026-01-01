@@ -1,4 +1,5 @@
 /logs/
+/figs/
 /gridsearch_best_results.csv
 /calculations/int_fac.mw
 /discarded/
