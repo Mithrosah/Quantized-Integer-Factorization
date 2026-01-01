@@ -19,7 +19,6 @@ def parse_args():
     )
     return p.parse_args()
 
-
 args = parse_args()
 
 
