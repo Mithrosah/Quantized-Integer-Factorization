@@ -37,8 +37,8 @@ n_runs = 1000
 
 
 # parameter grids
-p_good_grid = [3/4, 7/8, 15/16, 31/32, 63/64, 127/128, 255/256]
-c_grid = [100, 10, 1, 1e-1, 1e-2, 1e-3]     # beta = c / 2**(x_bits+y_bits)
+p_good_grid = [3/4, 7/8, 15/16, 31/32, 63/64, 127/128]                          
+c_grid = [1e-1, 1e-2, 3e-2, 1e-3, 3e-3, 1e-4, 3e-4, 1e-5]     # beta = c / 2**(x_bits+y_bits)
 
 
 def total_samples_from_counts(counts) -> int:
@@ -79,7 +79,7 @@ print("=" * 100)
 for F, x_bits, y_bits in ins:
 
     # instance-dependent steps
-    steps = 1000 * (x_bits + y_bits) + burn_in
+    steps = 2000 * (x_bits + y_bits) + burn_in
 
     # ---------- RULE mode ----------
     best_rule = {
