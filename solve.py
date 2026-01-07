@@ -26,8 +26,9 @@ args = parse_args()
 ins = []
 with open('./instances.csv', 'r', encoding='utf-8') as f:
     for line in f:
-        ins.append([int(x) for x in line.strip().split()])
+        ins.append([int(x.strip('"')) for x in line.split()])
 
+ins = ins[22:]
 
 # sampling configuration (instance-dependent steps)
 burn_in = 0
@@ -37,7 +38,7 @@ n_runs = 1000
 
 
 # parameter grids
-p_good_grid = [3/4, 7/8, 15/16, 31/32, 63/64, 127/128]                          
+p_good_grid = [3/4, 7/8, 15/16, 31/32, 63/64, 127/128]
 c_grid = [1e-1, 1e-2, 3e-2, 1e-3, 3e-3, 1e-4, 3e-4, 1e-5]     # beta = c / 2**(x_bits+y_bits)
 
 
@@ -72,7 +73,7 @@ print("=" * 100)
 print("Grid search")
 print(f"opt_metric={args.metric}, ttfh_stat={args.ttfh_stat}")
 print(f"burn_in={burn_in}, sample_every={sample_every}, n_runs={n_runs}, seed(base)={seed}")
-print("steps = 5000 * (x_bits + y_bits) + burn_in")
+print("steps = 2000 * (x_bits + y_bits) + burn_in")
 print("=" * 100)
 
 
