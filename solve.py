@@ -42,7 +42,7 @@ def parse_args():
 burn_in = 0
 sample_every = 1
 seed = 42
-n_runs = 20
+n_runs = 1000
 
 # parameter grids
 p_good_grid = [3 / 4, 7 / 8, 15 / 16, 31 / 32, 63 / 64, 127 / 128]
