@@ -152,8 +152,7 @@ def main():
         for line in f:
             ins.append([int(x.strip('"')) for x in line.split()])
 
-    # keep the same slicing behavior as original script
-    ins = ins[0:2]
+    # ins = ins[0:2]
 
     rows = []
 
