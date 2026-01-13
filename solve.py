@@ -3,7 +3,7 @@ import os
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from utils import run_sampler_repeated
+from utils import run_sampler_repeated, load_instances
 
 
 def parse_args():
@@ -146,14 +146,8 @@ def _eval_one_config(
 def main():
     args = parse_args()
 
-    # load problem instances
-    ins = []
-    with open(args.instances, "r", encoding="utf-8") as f:
-        for line in f:
-            ins.append([int(x.strip('"')) for x in line.split()])
-
-    # ins = ins[0:2]
-
+    ins = load_instances()
+    
     rows = []
 
     max_workers = args.max_workers if args.max_workers and args.max_workers > 0 else (os.cpu_count() or 1)
