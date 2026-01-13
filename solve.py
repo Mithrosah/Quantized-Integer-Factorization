@@ -146,12 +146,13 @@ def _eval_one_config(
 def main():
     args = parse_args()
 
-    ins = load_instances()
-    
+    ins = load_instances(args.instances)
+
     rows = []
 
     max_workers = args.max_workers if args.max_workers and args.max_workers > 0 else (os.cpu_count() or 1)
 
+    print(f"Loaded {len(ins)} instances from {args.instances}")
     print("=" * 100)
     print("Grid search (parallel)")
     print(f"opt_metric={args.metric}, ttfh_stat={args.ttfh_stat}")
