@@ -3,7 +3,7 @@ import os
 import argparse
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from utils import run_sampler_repeated
+from utils import run_sampler_repeated, load_instances
 
 
 def parse_args():
@@ -39,10 +39,12 @@ def parse_args():
 
 
 # sampling configuration (instance-dependent steps)
-burn_in = 0
-sample_every = 1
-seed = 42
-n_runs = 1000
+BURN_IN = 0
+SAMPLE_EVERY = 1
+SEED = 42
+N_RUNS = 1000
+STEPS_PER_BIT = 2000
+
 
 # parameter grids
 p_good_grid = [3 / 4, 7 / 8, 15 / 16, 31 / 32, 63 / 64, 127 / 128]
@@ -146,30 +148,25 @@ def _eval_one_config(
 def main():
     args = parse_args()
 
-    # load problem instances
-    ins = []
-    with open(args.instances, "r", encoding="utf-8") as f:
-        for line in f:
-            ins.append([int(x.strip('"')) for x in line.split()])
-
-    # ins = ins[0:2]
+    ins = load_instances(args.instances)
 
     rows = []
 
     max_workers = args.max_workers if args.max_workers and args.max_workers > 0 else (os.cpu_count() or 1)
 
+    print(f"Loaded {len(ins)} instances from {args.instances}")
     print("=" * 100)
     print("Grid search (parallel)")
     print(f"opt_metric={args.metric}, ttfh_stat={args.ttfh_stat}")
-    print(f"burn_in={burn_in}, sample_every={sample_every}, n_runs={n_runs}, seed(base)={seed}")
-    print("steps = 2000 * (x_bits + y_bits) + burn_in")
+    print(f"burn_in={BURN_IN}, sample_every={SAMPLE_EVERY}, n_runs={N_RUNS}, seed(base)={SEED}")
+    print(f"steps = {STEPS_PER_BIT} * (x_bits + y_bits) + burn_in")
     print(f"max_workers={max_workers}")
     print("=" * 100)
 
     # Reuse ONE process pool for all instances (less overhead).
     with ProcessPoolExecutor(max_workers=max_workers) as ex:
         for F, x_bits, y_bits in ins:
-            steps = 2000 * (x_bits + y_bits) + burn_in
+            steps = 2000 * (x_bits + y_bits) + BURN_IN
 
             # ---------- RULE mode ----------
             best_rule = None
@@ -182,10 +179,10 @@ def main():
                         x_bits=x_bits,
                         y_bits=y_bits,
                         steps=steps,
-                        burn_in=burn_in,
-                        sample_every=sample_every,
-                        n_runs=n_runs,
-                        base_seed=seed,
+                        burn_in=BURN_IN,
+                        sample_every=SAMPLE_EVERY,
+                        n_runs=N_RUNS,
+                        base_seed=SEED,
                         ttfh_stat=args.ttfh_stat,
                         mode="rule",
                         p_good=p_good,
@@ -211,10 +208,10 @@ def main():
                         x_bits=x_bits,
                         y_bits=y_bits,
                         steps=steps,
-                        burn_in=burn_in,
-                        sample_every=sample_every,
-                        n_runs=n_runs,
-                        base_seed=seed,
+                        burn_in=BURN_IN,
+                        sample_every=SAMPLE_EVERY,
+                        n_runs=N_RUNS,
+                        base_seed=SEED,
                         ttfh_stat=args.ttfh_stat,
                         mode="sigmoid",
                         p_good=0.875,
@@ -232,11 +229,11 @@ def main():
                 F=F,
                 x_bits=x_bits,
                 y_bits=y_bits,
-                n_runs=n_runs,
+                n_runs=N_RUNS,
                 steps=steps,
-                burn_in=burn_in,
-                sample_every=sample_every,
-                base_seed=seed,
+                burn_in=BURN_IN,
+                sample_every=SAMPLE_EVERY,
+                base_seed=SEED,
                 mode="deterministic",
                 p_good=0.875,
                 beta=0.01,
@@ -252,7 +249,7 @@ def main():
             print(
                 f"[rule]          "
                 f"best p_good = {best_rule['p_good']:.6E} | "
-                f"success_runs = {best_rule['success_runs']:>4d}/{n_runs:<4d} "
+                f"success_runs = {best_rule['success_runs']:>4d}/{N_RUNS:<4d} "
                 f"({best_rule['success_rate']:>7.4%}) | "
                 f"total_samples={best_rule['total_samples']} | "
                 f"ttfh({args.ttfh_stat})={best_rule['ttfh']:.1f}"
@@ -261,7 +258,7 @@ def main():
             print(
                 f"[sigmoid]       "
                 f"best c      = {best_sigmoid['c']:.6E} | "
-                f"success_runs = {best_sigmoid['success_runs']:>4d}/{n_runs:<4d} "
+                f"success_runs = {best_sigmoid['success_runs']:>4d}/{N_RUNS:<4d} "
                 f"({best_sigmoid['success_rate']:>7.4%}) | "
                 f"total_samples={best_sigmoid['total_samples']} | "
                 f"ttfh({args.ttfh_stat})={best_sigmoid['ttfh']:.1f}"
@@ -269,7 +266,7 @@ def main():
 
             print(
                 f"[deterministic]                            | "
-                f"success_runs = {det_success_runs:>4d}/{n_runs:<4d} "
+                f"success_runs = {det_success_runs:>4d}/{N_RUNS:<4d} "
                 f"({det_success_rate:>7.4%}) | "
                 f"total_samples={det_total_samples} | "
                 f"ttfh({args.ttfh_stat})={det_ttfh:.1f}"
@@ -281,10 +278,10 @@ def main():
                     "x_bits": x_bits,
                     "y_bits": y_bits,
                     "steps": steps,
-                    "burn_in": burn_in,
-                    "sample_every": sample_every,
-                    "n_runs": n_runs,
-                    "seed_base": seed,
+                    "burn_in": BURN_IN,
+                    "sample_every": SAMPLE_EVERY,
+                    "n_runs": N_RUNS,
+                    "seed_base": SEED,
 
                     "rule_best_p_good": best_rule["p_good"],
                     "rule_success_runs": best_rule["success_runs"],

@@ -1,6 +1,7 @@
 import random
 import math
 from collections import Counter
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
@@ -9,6 +10,60 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 # =============================
 # Helpers
 # =============================
+
+def load_instances(path: str = "./instances.csv"):
+    """
+    Load instances from a CSV with header:
+        F,x_bits,y_bits
+    Returns:
+        list of (F, x_bits, y_bits)
+    """
+    instances = []
+
+    with open(path, "r", encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+
+        required_fields = {"F", "x_bits", "y_bits"}
+        if not required_fields.issubset(reader.fieldnames):
+            raise ValueError(
+                f"instances.csv must contain header {required_fields}, "
+                f"got {reader.fieldnames}"
+            )
+
+        for row_idx, row in enumerate(reader, start=2):  # header is line 1
+            # Skip empty or delimiter-only rows
+            if not any(row.values()):
+                continue
+
+            try:
+                F = int(row["F"])
+                x_bits = int(row["x_bits"])
+                y_bits = int(row["y_bits"])
+            except Exception as e:
+                raise ValueError(
+                    f"Invalid integer at line {row_idx}: {row}"
+                ) from e
+
+            # Optional but strongly recommended sanity checks
+            if x_bits < 2 or y_bits < 2:
+                raise ValueError(
+                    f"Invalid bits at line {row_idx}: "
+                    f"x_bits={x_bits}, y_bits={y_bits} (must be >=2)"
+                )
+
+            if F % 2 == 0:
+                raise ValueError(
+                    f"Invalid F at line {row_idx}: F={F} must be odd "
+                    f"(X,Y are forced odd)"
+                )
+
+            instances.append((F, x_bits, y_bits))
+
+    if not instances:
+        raise ValueError("No instances loaded from instances.csv")
+
+    return instances
+
 
 def sigmoid(z: float) -> float:
     if z >= 0:
@@ -239,9 +294,8 @@ def plot_3d_hist(counts, x_bits, y_bits, title="3D histogram of (X,Y)"):
 # =============================
 if __name__ == "__main__":
 
-    F = 161
-    x_bits = 3
-    y_bits = 5
+    ins = load_instances()
+    F, x_bits, y_bits = ins[3]
 
     steps = 50000
     burn_in = 5000
