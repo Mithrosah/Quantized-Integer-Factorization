@@ -26,8 +26,8 @@ def parse_args():
     )
     p.add_argument(
         "--instances",
-        default="./instances.csv",
-        help="Path to instances.csv (default: ./instances.csv).",
+        default="./instances.jsonl",
+        help="Path to instances.jsonl (default: ./instances.jsonl).",
     )
     p.add_argument(
         "--max_workers",
