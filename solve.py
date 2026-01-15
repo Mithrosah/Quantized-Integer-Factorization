@@ -166,7 +166,7 @@ def main():
     # Reuse ONE process pool for all instances (less overhead).
     with ProcessPoolExecutor(max_workers=max_workers) as ex:
         for F, x_bits, y_bits in ins:
-            steps = 2000 * (x_bits + y_bits) + BURN_IN
+            steps = STEPS_PER_BIT * (x_bits + y_bits) + BURN_IN
 
             # ---------- RULE mode ----------
             best_rule = None

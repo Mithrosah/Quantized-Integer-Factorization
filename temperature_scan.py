@@ -20,7 +20,7 @@ def parse_args():
     p = argparse.ArgumentParser(
         description="Evaluate sigmoid mode success rate for multiple c values on selected instances."
     )
-    p.add_argument("--instances", default="./instances.csv", help="Path to instances.csv")
+    p.add_argument("--instances", default="./instances.jsonl", help="Path to instances.jsonl")
     p.add_argument(
         "--pick",
         type=str,
