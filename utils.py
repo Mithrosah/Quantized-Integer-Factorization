@@ -1,7 +1,7 @@
 import random
 import math
 from collections import Counter
-import csv
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
@@ -10,57 +10,37 @@ from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 # =============================
 # Helpers
 # =============================
-
-def load_instances(path: str = "./instances.csv"):
+def load_instances(path: str ='./instances.jsonl') -> list:
     """
-    Load instances from a CSV with header:
-        F,x_bits,y_bits
-    Returns:
-        list of (F, x_bits, y_bits)
+    Load integer factorization instances.
+
+    Parameters
+    ----------
+    path : str, optional
+        Path to the JSONL file containing factorization instances.
+        Defaults to './instances.jsonl'.
+
+    Returns
+    -------
+    list
+        A list of tuples (F, x_bits, y_bits), one per instance.
     """
     instances = []
 
-    with open(path, "r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-
-        required_fields = {"F", "x_bits", "y_bits"}
-        if not required_fields.issubset(reader.fieldnames):
-            raise ValueError(
-                f"instances.csv must contain header {required_fields}, "
-                f"got {reader.fieldnames}"
-            )
-
-        for row_idx, row in enumerate(reader, start=2):  # header is line 1
-            # Skip empty or delimiter-only rows
-            if not any(row.values()):
-                continue
+    with open(path, "r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue  # skip empty lines
 
             try:
-                F = int(row["F"])
-                x_bits = int(row["x_bits"])
-                y_bits = int(row["y_bits"])
+                r = json.loads(line)
+                F = int(r["F"])
+                x_bits = int(r["meta"]["x_bits"])
+                y_bits = int(r["meta"]["y_bits"])
+                instances.append((F, x_bits, y_bits))
             except Exception as e:
-                raise ValueError(
-                    f"Invalid integer at line {row_idx}: {row}"
-                ) from e
-
-            # Optional but strongly recommended sanity checks
-            if x_bits < 2 or y_bits < 2:
-                raise ValueError(
-                    f"Invalid bits at line {row_idx}: "
-                    f"x_bits={x_bits}, y_bits={y_bits} (must be >=2)"
-                )
-
-            if F % 2 == 0:
-                raise ValueError(
-                    f"Invalid F at line {row_idx}: F={F} must be odd "
-                    f"(X,Y are forced odd)"
-                )
-
-            instances.append((F, x_bits, y_bits))
-
-    if not instances:
-        raise ValueError("No instances loaded from instances.csv")
+                raise ValueError(f"Error in line {line_no}: {e}")
 
     return instances
 

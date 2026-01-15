@@ -274,7 +274,7 @@ def main():
 
             rows.append(
                 {
-                    "F": F,
+                    "F": str(F),
                     "x_bits": x_bits,
                     "y_bits": y_bits,
                     "steps": steps,
