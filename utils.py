@@ -31,6 +31,10 @@ def load_instances(path: str = "./instances.csv"):
             )
 
         for row_idx, row in enumerate(reader, start=2):  # header is line 1
+            # Skip empty or delimiter-only rows
+            if not any(row.values()):
+                continue
+
             try:
                 F = int(row["F"])
                 x_bits = int(row["x_bits"])
